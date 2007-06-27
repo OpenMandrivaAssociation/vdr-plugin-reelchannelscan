@@ -30,8 +30,6 @@ updates/appends all found channels to the current channel list.
 %patch0 -p1
 dos2unix transponders/sources.conf
 
-perl -pi -e "s,/PLUGINS/src/rotor/rotor.h,/plugin.h," Makefile
-
 %build
 %vdr_plugin_build
 
