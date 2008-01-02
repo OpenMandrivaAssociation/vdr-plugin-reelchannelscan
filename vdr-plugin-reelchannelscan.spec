@@ -15,6 +15,7 @@ URL:		http://www.vdr-wiki.de/wiki/index.php/Reelchannelscan-plugin
 Source:		http://deela.cc.fh-lippe.de/files/vdr-reelchannelscan/vdr-%plugin-%version.tar.bz2
 # From e-tobi repo:
 Patch0:		04_reelchannelscan-0.3.0-configdir.dpatch
+BuildRoot:	%{_tmppath}/%{name}-buildroot
 BuildRequires:	vdr-devel >= 1.4.1-6
 BuildRequires:	dos2unix
 Requires:	vdr-abi = %vdr_abi
