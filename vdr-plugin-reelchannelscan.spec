@@ -18,6 +18,7 @@ Patch0:		04_reelchannelscan-0.3.0-configdir.dpatch
 Patch1:		02_scanning_status_service.dpatch
 Patch2:		90_reelchannelscan-0.4.3-vdr-1.5.10.dpatch
 Patch3:		reelchannelscan-0.4.3-i18n-1.6.patch
+Patch4:		reelchannelscan-includes.patch
 BuildRoot:	%{_tmppath}/%{name}-buildroot
 BuildRequires:	vdr-devel >= 1.6.0
 BuildRequires:	dos2unix
@@ -34,6 +35,7 @@ updates/appends all found channels to the current channel list.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 %vdr_plugin_prep
 dos2unix transponders/sources.conf
 
