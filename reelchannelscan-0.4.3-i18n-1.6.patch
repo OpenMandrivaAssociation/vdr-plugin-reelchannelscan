@@ -1,0 +1,3374 @@
+
+This is a semi-automatically created i18n adaptation patch and may contain
+errors (such as missing translations). This should only be used as a
+temporary measure until the upstream plugin maintainer fixes the plugin
+properly according to the instructions in i18n-to-gettext.pl.
+
+Created for Mandriva Linux packaging by Anssi Hannula <anssi@mandriva.org>.
+
+
+Index: reelchannelscan-0.4.3/Makefile
+===================================================================
+--- reelchannelscan-0.4.3/Makefile
++++ reelchannelscan-0.4.3/Makefile	2008-04-24 23:20:57.000000000 +0300
+@@ -67,9 +67,9 @@
+ ### The object files (add further files here):
+ 
+ ifdef REELVDR
+-OBJS = channelscan.o csmenu.o dirfiles.o filter.o i18n.o scan.o transponders.o  
++OBJS = channelscan.o csmenu.o dirfiles.o filter.o  scan.o transponders.o  
+ else
+-OBJS = channelscan.o csmenu.o filter.o i18n.o scan.o transponders.o  
++OBJS = channelscan.o csmenu.o filter.o  scan.o transponders.o  
+ endif
+  
+ ### Implicit rules:
+@@ -86,10 +86,35 @@
+ 
+ -include $(DEPFILE)
+ 
++### Internationalization (I18N):
++
++PODIR     = po
++LOCALEDIR = $(VDRDIR)/locale
++I18Npo    = $(wildcard $(PODIR)/*.po)
++I18Nmsgs  = $(addprefix $(LOCALEDIR)/, $(addsuffix /LC_MESSAGES/vdr-$(PLUGIN).mo, $(notdir $(foreach file, $(I18Npo), $(basename $(file))))))
++I18Npot   = $(PODIR)/$(PLUGIN).pot
++
++%.mo: %.po
++	msgfmt -c -o $@ $<
++
++$(I18Npot): $(wildcard *.[ch] *.[ch]xx *.cc *.[ch]pp *.hh)
++	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --msgid-bugs-address='<http://qa.mandriva.com/>' -o $@ $^
++
++%.po: $(I18Npot)
++	msgmerge -U --no-wrap --no-location --backup=none -q $@ $<
++	@touch $@
++
++$(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
++	@mkdir -p $(dir $@)
++	cp $< $@
++
++.PHONY: i18n
++i18n: $(I18Nmsgs)
++
+ ### Targets:
+ 
+ 
+-all: libvdr-$(PLUGIN).so
++all: libvdr-$(PLUGIN).so i18n
+ 
+ libvdr-$(PLUGIN).so: $(OBJS)
+ 	$(CXX) $(CXXFLAGS) -shared $(OBJS) -o $@
+@@ -104,5 +129,6 @@
+ 	@echo Distribution package created as $(PACKAGE).tgz
+ 
+ clean:
++	@-rm -f $(PODIR)/*.mo $(PODIR)/*.pot
+ 	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~
+ 
+Index: reelchannelscan-0.4.3/channelscan.c
+===================================================================
+--- reelchannelscan-0.4.3/channelscan.c
++++ reelchannelscan-0.4.3/channelscan.c	2008-04-24 23:20:57.000000000 +0300
+@@ -24,7 +24,7 @@
+  ***************************************************************************/
+  /* kate: set expandtab tabstop=4 shiftwidth=4: */
+ 
+-#include "i18n.h"
++
+ #include "service.h"
+ #include "csmenu.h"
+ #include "channelscan.h"
+@@ -92,7 +92,7 @@
+ 
+ bool cPluginChannelscan::Start(void) {
+    // Start any background activities the plugin shall perform.
+-   RegisterI18n(Phrases);
++   
+    return true;
+ }
+ 
+Index: reelchannelscan-0.4.3/channelscan.h
+===================================================================
+--- reelchannelscan-0.4.3/channelscan.h
++++ reelchannelscan-0.4.3/channelscan.h	2008-04-24 23:20:57.000000000 +0300
+@@ -29,7 +29,7 @@
+ #include <vdr/plugin.h>
+ 
+ static const char *VERSION        = "0.4.3";
+-static const char *DESCRIPTION    = "Search Transponders for DVB Channels";
++static const char *DESCRIPTION    = trNOOP("Search Transponders for DVB Channels");
+ static const char *MAINMENUENTRY  = "Channelscan";
+ 
+ enum eAutoScanStat { 
+Index: reelchannelscan-0.4.3/csmenu.c
+===================================================================
+--- reelchannelscan-0.4.3/csmenu.c
++++ reelchannelscan-0.4.3/csmenu.c	2008-04-24 23:20:57.000000000 +0300
+@@ -251,7 +251,7 @@
+    /* TODO  aktivate loop mode again!
+    if (loopMode && ::Setup.DiSEqC)
+    {
+-      Add(new cMenuInfoItem("Scanning configured satellites"));
++      Add(new cMenuInfoItem(trNOOP("Scanning configured satellites")));
+       AddBlankLineItem(4);
+    }
+ 
+@@ -293,7 +293,7 @@
+                   Add(new cMenuEditIntItem(tr("Frequency (MHz)"), &frequency));  
+                   Add(new cMenuEditChrItem(tr("Polarization"),&polarization, "HVLR"));
+                   Add(new cMenuEditIntItem(tr("Symbolrate"), &symbolrate));
+-                  Add(new cMenuEditStraItem("FEC", &fecStat, 10, fecTexts ));
++                  Add(new cMenuEditStraItem(trNOOP("FEC"), &fecStat, 10, fecTexts ));
+                   break;          
+           
+           case TERR:
+Index: reelchannelscan-0.4.3/i18n.c
+===================================================================
+--- reelchannelscan-0.4.3/i18n.c
++++ reelchannelscan-0.4.3/i18n.c	2008-04-24 23:20:57.000000000 +0300
+@@ -1,1313 +0,0 @@
+-/*
+- * i18n.c: Internationalization
+- *
+- * See the README file for copyright information and how to reach the author.
+- *
+- * $Id:
+- */
+-
+-#include "i18n.h"
+-
+- const tI18nPhrase Phrases[] = {
+-  { "Search Transponders for DVB Channels", //EN
+-    "Durchsucht Transponder nach DVB Kanälen.",// DE
+-    "", // Slovenski
+-    "Ricerca Transponders di Canali DVB",// IT
+-    "Doorzoek Transponders naar DVB kanalen", // Nederlands
+-    "", // Português
+-    "", // Français
+-    "", // Norsk
+-    "Kanavahaku DVB-transpondereille",// FI
+-    "", // Polski
+-    "", // Español
+-    "", // ÅëëçíéêÜ (Greek)
+-    "", // Svenska
+-    "", // Romaneste
+-    "", // Magyar
+-    "", // Català
+-    "", // ÀãááÚØÙ (Russian)
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Search Mode",
+-    "Suchmodus",
+-    "",
+-    "Modalita' di Ricerca",
+-    "Zoek mode",
+-    "",
+-    "",
+-    "",
+-    "Hakutapa",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "scanning on transponder",
+-    "Suche auf Transponder",
+-    "",
+-    "Ricerca trasponder",
+-    "Scan op transponder",
+-    "",
+-    "",
+-    "",
+-    "haetaan transponderilta",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Scanning configured satellites",
+-    "Durchsuche eingerichtete Satelliten",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "DiSEqC",
+-    "DiSEqC",
+-    "DiSEqC",
+-    "DiSEqC",
+-    "DiSEqC",
+-    "",
+-    "",
+-    "",
+-    "DiSEqC-kytkin",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "FEC",
+-    "FEC",
+-    "",
+-    "FEC",
+-    "FEC",
+-    "",
+-    "",
+-    "",
+-    "FEC",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "None",
+-    "Keine",
+-    "",
+-    "Nessun",
+-    "Geen",
+-    "",
+-    "",
+-    "",
+-    "ei",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Auto",
+-    "Auto",
+-    "",
+-    "Auto",
+-    "Auto",
+-    "",
+-    "",
+-    "",
+-    "auto",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "SearchMode$Auto",
+-    "Automatisch",
+-    "",
+-    "Ricerca automatica",
+-    "Automatisch",
+-    "",
+-    "",
+-    "",
+-    "automaattinen",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Manual",
+-    "Manuell",
+-    "",
+-    "Manuale",
+-    "Handmatig",
+-    "",
+-    "",
+-    "",
+-    "manuaalinen",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Channelscan",
+-    "Kanalsuche",
+-    "",
+-    "Scansione canali",
+-    "Kanaal scan",
+-    "",
+-    "",
+-    "",
+-    "Kanavahaku",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "¿ÞØáÚ ÚÐÝÐÛÞÒ",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Detailed search",
+-    "Detaillierte Suche",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Position",
+-    "Position",
+-    "",
+-    "Posizione",
+-    "Positie",
+-    "",
+-    "",
+-    "",
+-    "Sijainti",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Tuner Error",
+-    "Tuner Fehler",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Scanning on transponder",
+-    "Durchsuche Transponder",
+-    "",
+-    "Ricerca Transponders",
+-    "Scannen op transponder",
+-    "",
+-    "",
+-    "",
+-    "Haetaan transponderilta",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "channels in current list",
+-    "Kanäle in aktueller Liste",
+-    "",
+-    "Canali presenti nella lista",
+-    "Kanalen in huidige lijst",
+-    "",
+-    "",
+-    "",
+-    "Tämänhetkiset kanavat",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "TV CHANNELS",
+-    "TV KANÄLE",
+-    "",
+-    "CANALI TV",
+-    "TV KANALEN",
+-    "",
+-    "",
+-    "",
+-    "TV-kanavat",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "No new channels found",
+-    "Keine neuen Kanäle gefunden",
+-    "",
+-    "Non sono stati trovati nuovi canali",
+-    "Geen nieuwe kanalen gevonden",
+-    "",
+-    "",
+-    "",
+-    "Uusia kanavia ei löydetty",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Scanning aborted by User",
+-    "Suche abgebrochen",
+-    "",
+-    "Ricerca interrotta dall'Utente",
+-    "Scannen afgebroken door User",
+-    "",
+-    "",
+-    "",
+-    "Haku keskeytetty",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-
+-  { "TV CHANNELS                     RADIO",
+-    "TV KANÄLE                       RADIO",
+-    "",
+-    "CANALI TV                       RADIO",
+-    "TV KANALEN                      RADIO",
+-    "",
+-    "",
+-    "",
+-    "TV-kanavat                      Radio",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Symbolrate",
+-    "Symbolrate",
+-    "",
+-    "Symbolrate",
+-    "Symbolrate",
+-    "",
+-    "",
+-    "",
+-    "Symbolinopeus",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "ÁØÜÒ.áÚÞàÞáâì",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Frequency",
+-    "Frequenz",
+-    "",
+-    "Frequenza",
+-    "Frequentie",
+-    "",
+-    "",
+-    "",
+-    "Taajuus",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "ÇÐáâÞâÐ",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Scanning %s\tPlease Wait",
+-    "Durchsuche %s\tBitte warten",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "Haku käynnissä %s.\tOdota hetkinen...",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Scanning %s (%iMHz) \tPlease Wait",
+-    "Durchsuche %s (%iMHz) \tBitte warten",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "Haku käynnissä %s.\tOdota hetkinen...",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Scanning %s (%.3fMHz) \tPlease Wait",
+-    "Durchsuche %s (%.3fMHz) \tBitte warten",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "Haku käynnissä %s.\tOdota hetkinen...",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Button$Change",
+-    "Auswählen",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Button$Start",
+-    "Start",
+-    "",
+-    "Start",
+-    "Start",
+-    "",
+-    "",
+-    "",
+-    "Aloita",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Button$Backup",
+-    "Sichern",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Button$Delete",
+-    "Löschen",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Button$New",
+-    "Neu",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Radio only",
+-    "nur Radio",
+-    "",
+-    "Solo radio",
+-    "Alleen Radio",
+-    "",
+-    "",
+-    "",
+-    "vain radio",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "TV only",
+-    "nur TV",
+-    "",
+-    "Solo TV",
+-    "Alleen TV",
+-    "",
+-    "",
+-    "",
+-    "vain TV",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Radio + TV",
+-    "Radio + TV",
+-    "",
+-    "Radio + TV",
+-    "Radio + TV",
+-    "",
+-    "",
+-    "",
+-    "radio + TV",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Radio + TV + NVOD",
+-    "Radio + TV + NVOD",
+-    "",
+-    "Radio + TV + NVOD",
+-    "Radio + TV + NVOD",
+-    "",
+-    "",
+-    "",
+-    "radio + TV + NVOD",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Service Type",
+-    "Service Arten",
+-    "",
+-    "Tipo servizio",
+-    "Service type",
+-    "",
+-    "",
+-    "",
+-    "Haettavat palvelut",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "enabled",
+-    "aktiviert",
+-    "",
+-    "abilitato",
+-    "ingeschakeld",
+-    "",
+-    "",
+-    "",
+-    "päällä",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "disabled",
+-    "deaktiviert",
+-    "",
+-    "disabilitato",
+-    "uitgeschakeld",
+-    "",
+-    "",
+-    "",
+-    "pois",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Added new channels",
+-    "Neue Kanäle hinzugefügt",
+-    "",
+-    "Aggiunti nuovi canali",
+-    "Nieuwe kanalen toegevoegd",
+-    "",
+-    "",
+-    "",
+-    "Uudet kanavat lisätty",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Frequency (kHz)",
+-    "Frequenz (kHz)",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Frequency (MHz)",
+-    "Frequenz (MHz)",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Expert",                                                                                               
+-    "Experten",                                                                                             
+-    "",                                                                                                     
+-    "Esperto",                                                                                              
+-    "Expert",                                                                                               
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Channel sel.",                                                                                               
+-    "Kanalliste",                                                                                             
+-    "",                                                                                                     
+-    "",                                                                                              
+-    "",                                                                                               
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "",                                                                                                     
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "DVB-S - Satellite",
+-    "DVB-S - Satellit",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "DVB-C - Cable",
+-    "DVB-C - Kabel",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "DVB-T - Terrestrial",
+-    "DVB-T - Terrestrisch",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Press OK to proceede",
+-    "Drücken Sie OK um fortzufahren",
+-    "",
+-    "Premere OK per continuare",
+-    "Druk OK om te vervolgen",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Press OK to finish or Exit for new scan",
+-    "Drücken Sie OK zum Beenden oder Exit für eine neue Kanalsuche.",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Standard",
+-    "Standard",
+-    "",
+-    "Standard", // Italiano
+-    "Standaard",
+-    "",
+-    "Standart",
+-    "",
+-    "Vakio",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Extended",
+-    "Erweitert",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "Précision",
+-    "",
+-    "Laaja",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Retrieving transponder list from %s",
+-    "Erhalte Transponderliste von %s",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Hrvatski (Croatian)
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Terrestrial",
+-    "Terr.",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Cable",
+-    "Kabel",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Running services on transponder: %i / %i",
+-    "Aktive Dienste auf Transponder: %i / %i",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Scanning %s (%iMHz)\t%s",
+-    "Durchsuche %s (%iMHz)\t%s",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Scanning %s (%.3fMHz)\t%s",
+-    "Durchsuche %s (%.3fMHz)\t%s",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Changes Done",
+-    "Änderung übernommen",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Changes failed",
+-    "Änderung fehlgeschlagen",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Channel lists",
+-    "Kanallisten",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { "Please check your Timers!",
+-    "Bitte Timer überprüfen!",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "",
+-    "", // Eesti
+-    "", // Dansk
+-    "", // Èesky (Czech)
+-  },
+-  { NULL }
+-  };
+-
+Index: reelchannelscan-0.4.3/i18n.h
+===================================================================
+--- reelchannelscan-0.4.3/i18n.h
++++ reelchannelscan-0.4.3/i18n.h	2008-04-24 23:20:57.000000000 +0300
+@@ -1,17 +0,0 @@
+-/*
+- * i18n.h: Internationalization
+- *
+- * See the README file for copyright information and how to reach the author.
+- *
+- * $Id: i18n.h 1.2 2002/05/11 14:48:16 kls Exp $
+- */
+-
+-#ifndef _I18N__H
+-#define _I18N__H
+-
+-#include <vdr/i18n.h>
+-#include <vdr/config.h>
+-
+-extern const tI18nPhrase Phrases[];
+-
+-#endif //_I18N__H
+Index: reelchannelscan-0.4.3/transponders.c
+===================================================================
+--- reelchannelscan-0.4.3/transponders.c
++++ reelchannelscan-0.4.3/transponders.c	2008-04-24 23:20:57.000000000 +0300
+@@ -292,7 +292,7 @@
+   }
+   else if (cSource::IsTerr(sourceCode_))
+   {
+-     position_ = "Terrestrial";
++     position_ = trNOOP("Terrestrial");
+      //if (scp->frequency == 0 || scp->frequency == -1) 
+      if (scp->frequency == 1)
+           CalcTerrTpl();
+@@ -304,7 +304,7 @@
+   }
+   else if (cSource::IsCable(sourceCode_))
+   {
+-     position_ = "Cable";
++     position_ = trNOOP("Cable");
+      if (scp->frequency == 1)
+           CalcCableTpl(0, scp);
+       else {
+@@ -504,7 +504,7 @@
+    int channel;
+    int bandwidth;
+    
+-   position_ = "Terrestrial";
++   position_ = trNOOP("Terrestrial");
+ 
+    for (channel=5; channel <= 69; channel++) 
+    {
+Index: reelchannelscan-0.4.3/po/channelscan.pot
+===================================================================
+--- reelchannelscan-0.4.3/po/channelscan.pot
++++ reelchannelscan-0.4.3/po/channelscan.pot	2008-04-24 23:20:57.000000000 +0300
+@@ -0,0 +1,264 @@
++# SOME DESCRIPTIVE TITLE.
++# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the PACKAGE package.
++# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
++#
++#, fuzzy
++msgid ""
++msgstr ""
++"Project-Id-Version: PACKAGE VERSION\n"
++"Report-Msgid-Bugs-To: http://qa.mandriva.com/\n"
++"POT-Creation-Date: 2008-04-24 23:20+0300\n"
++"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
++"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
++"Language-Team: LANGUAGE <LL@li.org>\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=CHARSET\n"
++"Content-Transfer-Encoding: 8bit\n"
++
++#: channelscan.c:43
++msgid "TV only"
++msgstr ""
++
++#: channelscan.c:44
++msgid "Radio only"
++msgstr ""
++
++#: channelscan.c:45
++msgid "Radio + TV"
++msgstr ""
++
++#: channelscan.c:54
++msgid "Service Type"
++msgstr ""
++
++#: channelscan.h:32
++msgid "Search Transponders for DVB Channels"
++msgstr ""
++
++#: csmenu.c:70
++msgid "Channelscan"
++msgstr ""
++
++#: csmenu.c:92
++msgid "None"
++msgstr ""
++
++#: csmenu.c:101 csmenu.c:962 csmenu.c:964
++msgid "Auto"
++msgstr ""
++
++#: csmenu.c:116 csmenu.c:133 csmenu.c:277 csmenu.c:280
++msgid "Manual"
++msgstr ""
++
++#: csmenu.c:117 csmenu.c:277 csmenu.c:280
++msgid "SearchMode$Auto"
++msgstr ""
++
++#: csmenu.c:118
++msgid "SearchMode$Auto NIT"
++msgstr ""
++
++#: csmenu.c:131
++msgid "Intelligent 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:132
++msgid "Try all 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:200
++msgid "DVB-T - Terrestrial"
++msgstr ""
++
++#: csmenu.c:200 csmenu.c:204 csmenu.c:208
++msgid "Tuner"
++msgstr ""
++
++#: csmenu.c:204
++msgid "DVB-C - Cable"
++msgstr ""
++
++#: csmenu.c:208
++msgid "DVB-S - Satellite"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:265
++msgid "Setup.DVB$Update channels"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "no"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "yes"
++msgstr ""
++
++#: csmenu.c:263
++msgid "Select channel list"
++msgstr ""
++
++#: csmenu.c:268
++msgid "Source"
++msgstr ""
++
++#: csmenu.c:272 csmenu.c:277 csmenu.c:280
++msgid "Search Mode"
++msgstr ""
++
++#: csmenu.c:273
++msgid "Position"
++msgstr ""
++
++#: csmenu.c:276
++msgid "Detailed search"
++msgstr ""
++
++#: csmenu.c:293
++msgid "Frequency (MHz)"
++msgstr ""
++
++#: csmenu.c:294
++msgid "Polarization"
++msgstr ""
++
++#: csmenu.c:295 csmenu.c:310
++msgid "Symbolrate"
++msgstr ""
++
++#: csmenu.c:296
++msgid "FEC"
++msgstr ""
++
++#: csmenu.c:301 csmenu.c:308
++msgid "Frequency (kHz)"
++msgstr ""
++
++#: csmenu.c:302 csmenu.c:309
++msgid "Bandwidth"
++msgstr ""
++
++#: csmenu.c:311
++msgid "Modulation"
++msgstr ""
++
++#: csmenu.c:333 csmenu.c:335
++msgid "Button$Start"
++msgstr ""
++
++#: csmenu.c:333
++msgid "Channel sel."
++msgstr ""
++
++#: csmenu.c:352
++msgid "DiSEqC"
++msgstr ""
++
++#: csmenu.c:357 csmenu.c:711
++msgid "Scanning aborted"
++msgstr ""
++
++#: csmenu.c:360
++msgid "Scanning succed"
++msgstr ""
++
++#: csmenu.c:363
++msgid "Retrieving transponders failed!"
++msgstr ""
++
++#: csmenu.c:364
++msgid "Please check satellites.conf."
++msgstr ""
++
++#: csmenu.c:367
++msgid "Tuner  preserved no lock!"
++msgstr ""
++
++#: csmenu.c:368
++msgid "Please check your comnections and satellites.conf."
++msgstr ""
++
++#: csmenu.c:371
++msgid "Unpredictable error occured!"
++msgstr ""
++
++#: csmenu.c:372
++msgid "Please try again later"
++msgstr ""
++
++#: csmenu.c:377
++msgid "channels in current list"
++msgstr ""
++
++#: csmenu.c:546
++msgid "TV CHANNELS                     RADIO"
++msgstr ""
++
++#: csmenu.c:655
++#, c-format
++msgid "Retrieving transponder list from %s"
++msgstr ""
++
++#: csmenu.c:664
++#, c-format
++msgid "Scanning %s (%iMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:670
++#, c-format
++msgid "Scanning %s (%.3fMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:682
++msgid "No new channels found"
++msgstr ""
++
++#: csmenu.c:686
++msgid "Added new channels"
++msgstr ""
++
++#: csmenu.c:690
++msgid "Press OK to finish or Exit for new scan"
++msgstr ""
++
++#: csmenu.c:946
++msgid "Scanning on transponder"
++msgstr ""
++
++#: csmenu.c:1037
++msgid "disabled"
++msgstr ""
++
++#: csmenu.c:1037
++msgid "enabled"
++msgstr ""
++
++#: csmenu.c:1075
++msgid "Channel lists"
++msgstr ""
++
++#: csmenu.c:1165
++msgid "Changes Done"
++msgstr ""
++
++#: csmenu.c:1167
++msgid "Please check your Timers!"
++msgstr ""
++
++#: csmenu.c:1172
++msgid "Changes failed"
++msgstr ""
++
++#: csmenu.c:1241
++msgid "Delete channel list?"
++msgstr ""
++
++#: transponders.c:295 transponders.c:507
++msgid "Terrestrial"
++msgstr ""
++
++#: transponders.c:307
++msgid "Cable"
++msgstr ""
+Index: reelchannelscan-0.4.3/po/de_DE.po
+===================================================================
+--- reelchannelscan-0.4.3/po/de_DE.po
++++ reelchannelscan-0.4.3/po/de_DE.po	2008-04-24 23:20:57.000000000 +0300
+@@ -0,0 +1,263 @@
++# VDR channelscan plugin language source file.
++# Copyright (C) YEAR THE VDR-channelscan'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the VDR-channelscan package.
++# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: VDR-channelscan\n"
++"Report-Msgid-Bugs-To: http://qa.mandriva.com/\n"
++"POT-Creation-Date: 2008-04-24 23:20+0300\n"
++"PO-Revision-Date: 2008-04-24 23:20+0300\n"
++"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
++"Language-Team: <vdr@linuxtv.org>\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=ISO-8859-15\n"
++"Content-Transfer-Encoding: 8bit\n"
++
++#: channelscan.c:43
++msgid "TV only"
++msgstr "nur TV"
++
++#: channelscan.c:44
++msgid "Radio only"
++msgstr "nur Radio"
++
++#: channelscan.c:45
++msgid "Radio + TV"
++msgstr "Radio + TV"
++
++#: channelscan.c:54
++msgid "Service Type"
++msgstr "Service Arten"
++
++#: channelscan.h:32
++msgid "Search Transponders for DVB Channels"
++msgstr "Durchsucht Transponder nach DVB Kanälen."
++
++#: csmenu.c:70
++msgid "Channelscan"
++msgstr "Kanalsuche"
++
++#: csmenu.c:92
++msgid "None"
++msgstr "Keine"
++
++#: csmenu.c:101 csmenu.c:962 csmenu.c:964
++msgid "Auto"
++msgstr "Auto"
++
++#: csmenu.c:116 csmenu.c:133 csmenu.c:277 csmenu.c:280
++msgid "Manual"
++msgstr "Manuell"
++
++#: csmenu.c:117 csmenu.c:277 csmenu.c:280
++msgid "SearchMode$Auto"
++msgstr "Automatisch"
++
++#: csmenu.c:118
++msgid "SearchMode$Auto NIT"
++msgstr ""
++
++#: csmenu.c:131
++msgid "Intelligent 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:132
++msgid "Try all 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:200
++msgid "DVB-T - Terrestrial"
++msgstr "DVB-T - Terrestrisch"
++
++#: csmenu.c:200 csmenu.c:204 csmenu.c:208
++msgid "Tuner"
++msgstr ""
++
++#: csmenu.c:204
++msgid "DVB-C - Cable"
++msgstr "DVB-C - Kabel"
++
++#: csmenu.c:208
++msgid "DVB-S - Satellite"
++msgstr "DVB-S - Satellit"
++
++#: csmenu.c:260 csmenu.c:265
++msgid "Setup.DVB$Update channels"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "no"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "yes"
++msgstr ""
++
++#: csmenu.c:263
++msgid "Select channel list"
++msgstr ""
++
++#: csmenu.c:268
++msgid "Source"
++msgstr ""
++
++#: csmenu.c:272 csmenu.c:277 csmenu.c:280
++msgid "Search Mode"
++msgstr "Suchmodus"
++
++#: csmenu.c:273
++msgid "Position"
++msgstr "Position"
++
++#: csmenu.c:276
++msgid "Detailed search"
++msgstr "Detaillierte Suche"
++
++#: csmenu.c:293
++msgid "Frequency (MHz)"
++msgstr "Frequenz (MHz)"
++
++#: csmenu.c:294
++msgid "Polarization"
++msgstr ""
++
++#: csmenu.c:295 csmenu.c:310
++msgid "Symbolrate"
++msgstr "Symbolrate"
++
++#: csmenu.c:296
++msgid "FEC"
++msgstr "FEC"
++
++#: csmenu.c:301 csmenu.c:308
++msgid "Frequency (kHz)"
++msgstr "Frequenz (kHz)"
++
++#: csmenu.c:302 csmenu.c:309
++msgid "Bandwidth"
++msgstr ""
++
++#: csmenu.c:311
++msgid "Modulation"
++msgstr ""
++
++#: csmenu.c:333 csmenu.c:335
++msgid "Button$Start"
++msgstr "Start"
++
++#: csmenu.c:333
++msgid "Channel sel."
++msgstr "Kanalliste"
++
++#: csmenu.c:352
++msgid "DiSEqC"
++msgstr "DiSEqC"
++
++#: csmenu.c:357 csmenu.c:711
++msgid "Scanning aborted"
++msgstr ""
++
++#: csmenu.c:360
++msgid "Scanning succed"
++msgstr ""
++
++#: csmenu.c:363
++msgid "Retrieving transponders failed!"
++msgstr ""
++
++#: csmenu.c:364
++msgid "Please check satellites.conf."
++msgstr ""
++
++#: csmenu.c:367
++msgid "Tuner  preserved no lock!"
++msgstr ""
++
++#: csmenu.c:368
++msgid "Please check your comnections and satellites.conf."
++msgstr ""
++
++#: csmenu.c:371
++msgid "Unpredictable error occured!"
++msgstr ""
++
++#: csmenu.c:372
++msgid "Please try again later"
++msgstr ""
++
++#: csmenu.c:377
++msgid "channels in current list"
++msgstr "Kanäle in aktueller Liste"
++
++#: csmenu.c:546
++msgid "TV CHANNELS                     RADIO"
++msgstr "TV KANÄLE                       RADIO"
++
++#: csmenu.c:655
++#, c-format
++msgid "Retrieving transponder list from %s"
++msgstr "Erhalte Transponderliste von %s"
++
++#: csmenu.c:664
++#, c-format
++msgid "Scanning %s (%iMHz)\t%s"
++msgstr "Durchsuche %s (%iMHz)\t%s"
++
++#: csmenu.c:670
++#, c-format
++msgid "Scanning %s (%.3fMHz)\t%s"
++msgstr "Durchsuche %s (%.3fMHz)\t%s"
++
++#: csmenu.c:682
++msgid "No new channels found"
++msgstr "Keine neuen Kanäle gefunden"
++
++#: csmenu.c:686
++msgid "Added new channels"
++msgstr "Neue Kanäle hinzugefügt"
++
++#: csmenu.c:690
++msgid "Press OK to finish or Exit for new scan"
++msgstr "Drücken Sie OK zum Beenden oder Exit für eine neue Kanalsuche."
++
++#: csmenu.c:946
++msgid "Scanning on transponder"
++msgstr "Durchsuche Transponder"
++
++#: csmenu.c:1037
++msgid "disabled"
++msgstr "deaktiviert"
++
++#: csmenu.c:1037
++msgid "enabled"
++msgstr "aktiviert"
++
++#: csmenu.c:1075
++msgid "Channel lists"
++msgstr "Kanallisten"
++
++#: csmenu.c:1165
++msgid "Changes Done"
++msgstr "Änderung übernommen"
++
++#: csmenu.c:1167
++msgid "Please check your Timers!"
++msgstr "Bitte Timer überprüfen!"
++
++#: csmenu.c:1172
++msgid "Changes failed"
++msgstr "Änderung fehlgeschlagen"
++
++#: csmenu.c:1241
++msgid "Delete channel list?"
++msgstr ""
++
++#: transponders.c:295 transponders.c:507
++msgid "Terrestrial"
++msgstr "Terr."
++
++#: transponders.c:307
++msgid "Cable"
++msgstr "Kabel"
+Index: reelchannelscan-0.4.3/po/fi_FI.po
+===================================================================
+--- reelchannelscan-0.4.3/po/fi_FI.po
++++ reelchannelscan-0.4.3/po/fi_FI.po	2008-04-24 23:20:57.000000000 +0300
+@@ -0,0 +1,263 @@
++# VDR channelscan plugin language source file.
++# Copyright (C) YEAR THE VDR-channelscan'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the VDR-channelscan package.
++# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: VDR-channelscan\n"
++"Report-Msgid-Bugs-To: http://qa.mandriva.com/\n"
++"POT-Creation-Date: 2008-04-24 23:20+0300\n"
++"PO-Revision-Date: 2008-04-24 23:20+0300\n"
++"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
++"Language-Team: <vdr@linuxtv.org>\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=ISO-8859-15\n"
++"Content-Transfer-Encoding: 8bit\n"
++
++#: channelscan.c:43
++msgid "TV only"
++msgstr "vain TV"
++
++#: channelscan.c:44
++msgid "Radio only"
++msgstr "vain radio"
++
++#: channelscan.c:45
++msgid "Radio + TV"
++msgstr "radio + TV"
++
++#: channelscan.c:54
++msgid "Service Type"
++msgstr "Haettavat palvelut"
++
++#: channelscan.h:32
++msgid "Search Transponders for DVB Channels"
++msgstr "Kanavahaku DVB-transpondereille"
++
++#: csmenu.c:70
++msgid "Channelscan"
++msgstr "Kanavahaku"
++
++#: csmenu.c:92
++msgid "None"
++msgstr "ei"
++
++#: csmenu.c:101 csmenu.c:962 csmenu.c:964
++msgid "Auto"
++msgstr "auto"
++
++#: csmenu.c:116 csmenu.c:133 csmenu.c:277 csmenu.c:280
++msgid "Manual"
++msgstr "manuaalinen"
++
++#: csmenu.c:117 csmenu.c:277 csmenu.c:280
++msgid "SearchMode$Auto"
++msgstr "automaattinen"
++
++#: csmenu.c:118
++msgid "SearchMode$Auto NIT"
++msgstr ""
++
++#: csmenu.c:131
++msgid "Intelligent 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:132
++msgid "Try all 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:200
++msgid "DVB-T - Terrestrial"
++msgstr ""
++
++#: csmenu.c:200 csmenu.c:204 csmenu.c:208
++msgid "Tuner"
++msgstr ""
++
++#: csmenu.c:204
++msgid "DVB-C - Cable"
++msgstr ""
++
++#: csmenu.c:208
++msgid "DVB-S - Satellite"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:265
++msgid "Setup.DVB$Update channels"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "no"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "yes"
++msgstr ""
++
++#: csmenu.c:263
++msgid "Select channel list"
++msgstr ""
++
++#: csmenu.c:268
++msgid "Source"
++msgstr ""
++
++#: csmenu.c:272 csmenu.c:277 csmenu.c:280
++msgid "Search Mode"
++msgstr "Hakutapa"
++
++#: csmenu.c:273
++msgid "Position"
++msgstr "Sijainti"
++
++#: csmenu.c:276
++msgid "Detailed search"
++msgstr ""
++
++#: csmenu.c:293
++msgid "Frequency (MHz)"
++msgstr ""
++
++#: csmenu.c:294
++msgid "Polarization"
++msgstr ""
++
++#: csmenu.c:295 csmenu.c:310
++msgid "Symbolrate"
++msgstr "Symbolinopeus"
++
++#: csmenu.c:296
++msgid "FEC"
++msgstr "FEC"
++
++#: csmenu.c:301 csmenu.c:308
++msgid "Frequency (kHz)"
++msgstr ""
++
++#: csmenu.c:302 csmenu.c:309
++msgid "Bandwidth"
++msgstr ""
++
++#: csmenu.c:311
++msgid "Modulation"
++msgstr ""
++
++#: csmenu.c:333 csmenu.c:335
++msgid "Button$Start"
++msgstr "Aloita"
++
++#: csmenu.c:333
++msgid "Channel sel."
++msgstr ""
++
++#: csmenu.c:352
++msgid "DiSEqC"
++msgstr "DiSEqC-kytkin"
++
++#: csmenu.c:357 csmenu.c:711
++msgid "Scanning aborted"
++msgstr ""
++
++#: csmenu.c:360
++msgid "Scanning succed"
++msgstr ""
++
++#: csmenu.c:363
++msgid "Retrieving transponders failed!"
++msgstr ""
++
++#: csmenu.c:364
++msgid "Please check satellites.conf."
++msgstr ""
++
++#: csmenu.c:367
++msgid "Tuner  preserved no lock!"
++msgstr ""
++
++#: csmenu.c:368
++msgid "Please check your comnections and satellites.conf."
++msgstr ""
++
++#: csmenu.c:371
++msgid "Unpredictable error occured!"
++msgstr ""
++
++#: csmenu.c:372
++msgid "Please try again later"
++msgstr ""
++
++#: csmenu.c:377
++msgid "channels in current list"
++msgstr "Tämänhetkiset kanavat"
++
++#: csmenu.c:546
++msgid "TV CHANNELS                     RADIO"
++msgstr "TV-kanavat                      Radio"
++
++#: csmenu.c:655
++#, c-format
++msgid "Retrieving transponder list from %s"
++msgstr ""
++
++#: csmenu.c:664
++#, c-format
++msgid "Scanning %s (%iMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:670
++#, c-format
++msgid "Scanning %s (%.3fMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:682
++msgid "No new channels found"
++msgstr "Uusia kanavia ei löydetty"
++
++#: csmenu.c:686
++msgid "Added new channels"
++msgstr "Uudet kanavat lisätty"
++
++#: csmenu.c:690
++msgid "Press OK to finish or Exit for new scan"
++msgstr ""
++
++#: csmenu.c:946
++msgid "Scanning on transponder"
++msgstr "Haetaan transponderilta"
++
++#: csmenu.c:1037
++msgid "disabled"
++msgstr "pois"
++
++#: csmenu.c:1037
++msgid "enabled"
++msgstr "päällä"
++
++#: csmenu.c:1075
++msgid "Channel lists"
++msgstr ""
++
++#: csmenu.c:1165
++msgid "Changes Done"
++msgstr ""
++
++#: csmenu.c:1167
++msgid "Please check your Timers!"
++msgstr ""
++
++#: csmenu.c:1172
++msgid "Changes failed"
++msgstr ""
++
++#: csmenu.c:1241
++msgid "Delete channel list?"
++msgstr ""
++
++#: transponders.c:295 transponders.c:507
++msgid "Terrestrial"
++msgstr ""
++
++#: transponders.c:307
++msgid "Cable"
++msgstr ""
+Index: reelchannelscan-0.4.3/po/it_IT.po
+===================================================================
+--- reelchannelscan-0.4.3/po/it_IT.po
++++ reelchannelscan-0.4.3/po/it_IT.po	2008-04-24 23:20:57.000000000 +0300
+@@ -0,0 +1,263 @@
++# VDR channelscan plugin language source file.
++# Copyright (C) YEAR THE VDR-channelscan'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the VDR-channelscan package.
++# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: VDR-channelscan\n"
++"Report-Msgid-Bugs-To: http://qa.mandriva.com/\n"
++"POT-Creation-Date: 2008-04-24 23:20+0300\n"
++"PO-Revision-Date: 2008-04-24 23:20+0300\n"
++"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
++"Language-Team: <vdr@linuxtv.org>\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=ISO-8859-15\n"
++"Content-Transfer-Encoding: 8bit\n"
++
++#: channelscan.c:43
++msgid "TV only"
++msgstr "Solo TV"
++
++#: channelscan.c:44
++msgid "Radio only"
++msgstr "Solo radio"
++
++#: channelscan.c:45
++msgid "Radio + TV"
++msgstr "Radio + TV"
++
++#: channelscan.c:54
++msgid "Service Type"
++msgstr "Tipo servizio"
++
++#: channelscan.h:32
++msgid "Search Transponders for DVB Channels"
++msgstr "Ricerca Transponders di Canali DVB"
++
++#: csmenu.c:70
++msgid "Channelscan"
++msgstr "Scansione canali"
++
++#: csmenu.c:92
++msgid "None"
++msgstr "Nessun"
++
++#: csmenu.c:101 csmenu.c:962 csmenu.c:964
++msgid "Auto"
++msgstr "Auto"
++
++#: csmenu.c:116 csmenu.c:133 csmenu.c:277 csmenu.c:280
++msgid "Manual"
++msgstr "Manuale"
++
++#: csmenu.c:117 csmenu.c:277 csmenu.c:280
++msgid "SearchMode$Auto"
++msgstr "Ricerca automatica"
++
++#: csmenu.c:118
++msgid "SearchMode$Auto NIT"
++msgstr ""
++
++#: csmenu.c:131
++msgid "Intelligent 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:132
++msgid "Try all 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:200
++msgid "DVB-T - Terrestrial"
++msgstr ""
++
++#: csmenu.c:200 csmenu.c:204 csmenu.c:208
++msgid "Tuner"
++msgstr ""
++
++#: csmenu.c:204
++msgid "DVB-C - Cable"
++msgstr ""
++
++#: csmenu.c:208
++msgid "DVB-S - Satellite"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:265
++msgid "Setup.DVB$Update channels"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "no"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "yes"
++msgstr ""
++
++#: csmenu.c:263
++msgid "Select channel list"
++msgstr ""
++
++#: csmenu.c:268
++msgid "Source"
++msgstr ""
++
++#: csmenu.c:272 csmenu.c:277 csmenu.c:280
++msgid "Search Mode"
++msgstr "Modalita' di Ricerca"
++
++#: csmenu.c:273
++msgid "Position"
++msgstr "Posizione"
++
++#: csmenu.c:276
++msgid "Detailed search"
++msgstr ""
++
++#: csmenu.c:293
++msgid "Frequency (MHz)"
++msgstr ""
++
++#: csmenu.c:294
++msgid "Polarization"
++msgstr ""
++
++#: csmenu.c:295 csmenu.c:310
++msgid "Symbolrate"
++msgstr "Symbolrate"
++
++#: csmenu.c:296
++msgid "FEC"
++msgstr "FEC"
++
++#: csmenu.c:301 csmenu.c:308
++msgid "Frequency (kHz)"
++msgstr ""
++
++#: csmenu.c:302 csmenu.c:309
++msgid "Bandwidth"
++msgstr ""
++
++#: csmenu.c:311
++msgid "Modulation"
++msgstr ""
++
++#: csmenu.c:333 csmenu.c:335
++msgid "Button$Start"
++msgstr "Start"
++
++#: csmenu.c:333
++msgid "Channel sel."
++msgstr ""
++
++#: csmenu.c:352
++msgid "DiSEqC"
++msgstr "DiSEqC"
++
++#: csmenu.c:357 csmenu.c:711
++msgid "Scanning aborted"
++msgstr ""
++
++#: csmenu.c:360
++msgid "Scanning succed"
++msgstr ""
++
++#: csmenu.c:363
++msgid "Retrieving transponders failed!"
++msgstr ""
++
++#: csmenu.c:364
++msgid "Please check satellites.conf."
++msgstr ""
++
++#: csmenu.c:367
++msgid "Tuner  preserved no lock!"
++msgstr ""
++
++#: csmenu.c:368
++msgid "Please check your comnections and satellites.conf."
++msgstr ""
++
++#: csmenu.c:371
++msgid "Unpredictable error occured!"
++msgstr ""
++
++#: csmenu.c:372
++msgid "Please try again later"
++msgstr ""
++
++#: csmenu.c:377
++msgid "channels in current list"
++msgstr "Canali presenti nella lista"
++
++#: csmenu.c:546
++msgid "TV CHANNELS                     RADIO"
++msgstr "CANALI TV                       RADIO"
++
++#: csmenu.c:655
++#, c-format
++msgid "Retrieving transponder list from %s"
++msgstr ""
++
++#: csmenu.c:664
++#, c-format
++msgid "Scanning %s (%iMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:670
++#, c-format
++msgid "Scanning %s (%.3fMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:682
++msgid "No new channels found"
++msgstr "Non sono stati trovati nuovi canali"
++
++#: csmenu.c:686
++msgid "Added new channels"
++msgstr "Aggiunti nuovi canali"
++
++#: csmenu.c:690
++msgid "Press OK to finish or Exit for new scan"
++msgstr ""
++
++#: csmenu.c:946
++msgid "Scanning on transponder"
++msgstr "Ricerca Transponders"
++
++#: csmenu.c:1037
++msgid "disabled"
++msgstr "disabilitato"
++
++#: csmenu.c:1037
++msgid "enabled"
++msgstr "abilitato"
++
++#: csmenu.c:1075
++msgid "Channel lists"
++msgstr ""
++
++#: csmenu.c:1165
++msgid "Changes Done"
++msgstr ""
++
++#: csmenu.c:1167
++msgid "Please check your Timers!"
++msgstr ""
++
++#: csmenu.c:1172
++msgid "Changes failed"
++msgstr ""
++
++#: csmenu.c:1241
++msgid "Delete channel list?"
++msgstr ""
++
++#: transponders.c:295 transponders.c:507
++msgid "Terrestrial"
++msgstr ""
++
++#: transponders.c:307
++msgid "Cable"
++msgstr ""
+Index: reelchannelscan-0.4.3/po/nl_NL.po
+===================================================================
+--- reelchannelscan-0.4.3/po/nl_NL.po
++++ reelchannelscan-0.4.3/po/nl_NL.po	2008-04-24 23:20:57.000000000 +0300
+@@ -0,0 +1,263 @@
++# VDR channelscan plugin language source file.
++# Copyright (C) YEAR THE VDR-channelscan'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the VDR-channelscan package.
++# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: VDR-channelscan\n"
++"Report-Msgid-Bugs-To: http://qa.mandriva.com/\n"
++"POT-Creation-Date: 2008-04-24 23:20+0300\n"
++"PO-Revision-Date: 2008-04-24 23:20+0300\n"
++"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
++"Language-Team: <vdr@linuxtv.org>\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=ISO-8859-15\n"
++"Content-Transfer-Encoding: 8bit\n"
++
++#: channelscan.c:43
++msgid "TV only"
++msgstr "Alleen TV"
++
++#: channelscan.c:44
++msgid "Radio only"
++msgstr "Alleen Radio"
++
++#: channelscan.c:45
++msgid "Radio + TV"
++msgstr "Radio + TV"
++
++#: channelscan.c:54
++msgid "Service Type"
++msgstr "Service type"
++
++#: channelscan.h:32
++msgid "Search Transponders for DVB Channels"
++msgstr "Doorzoek Transponders naar DVB kanalen"
++
++#: csmenu.c:70
++msgid "Channelscan"
++msgstr "Kanaal scan"
++
++#: csmenu.c:92
++msgid "None"
++msgstr "Geen"
++
++#: csmenu.c:101 csmenu.c:962 csmenu.c:964
++msgid "Auto"
++msgstr "Auto"
++
++#: csmenu.c:116 csmenu.c:133 csmenu.c:277 csmenu.c:280
++msgid "Manual"
++msgstr "Handmatig"
++
++#: csmenu.c:117 csmenu.c:277 csmenu.c:280
++msgid "SearchMode$Auto"
++msgstr "Automatisch"
++
++#: csmenu.c:118
++msgid "SearchMode$Auto NIT"
++msgstr ""
++
++#: csmenu.c:131
++msgid "Intelligent 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:132
++msgid "Try all 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:200
++msgid "DVB-T - Terrestrial"
++msgstr ""
++
++#: csmenu.c:200 csmenu.c:204 csmenu.c:208
++msgid "Tuner"
++msgstr ""
++
++#: csmenu.c:204
++msgid "DVB-C - Cable"
++msgstr ""
++
++#: csmenu.c:208
++msgid "DVB-S - Satellite"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:265
++msgid "Setup.DVB$Update channels"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "no"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "yes"
++msgstr ""
++
++#: csmenu.c:263
++msgid "Select channel list"
++msgstr ""
++
++#: csmenu.c:268
++msgid "Source"
++msgstr ""
++
++#: csmenu.c:272 csmenu.c:277 csmenu.c:280
++msgid "Search Mode"
++msgstr "Zoek mode"
++
++#: csmenu.c:273
++msgid "Position"
++msgstr "Positie"
++
++#: csmenu.c:276
++msgid "Detailed search"
++msgstr ""
++
++#: csmenu.c:293
++msgid "Frequency (MHz)"
++msgstr ""
++
++#: csmenu.c:294
++msgid "Polarization"
++msgstr ""
++
++#: csmenu.c:295 csmenu.c:310
++msgid "Symbolrate"
++msgstr "Symbolrate"
++
++#: csmenu.c:296
++msgid "FEC"
++msgstr "FEC"
++
++#: csmenu.c:301 csmenu.c:308
++msgid "Frequency (kHz)"
++msgstr ""
++
++#: csmenu.c:302 csmenu.c:309
++msgid "Bandwidth"
++msgstr ""
++
++#: csmenu.c:311
++msgid "Modulation"
++msgstr ""
++
++#: csmenu.c:333 csmenu.c:335
++msgid "Button$Start"
++msgstr "Start"
++
++#: csmenu.c:333
++msgid "Channel sel."
++msgstr ""
++
++#: csmenu.c:352
++msgid "DiSEqC"
++msgstr "DiSEqC"
++
++#: csmenu.c:357 csmenu.c:711
++msgid "Scanning aborted"
++msgstr ""
++
++#: csmenu.c:360
++msgid "Scanning succed"
++msgstr ""
++
++#: csmenu.c:363
++msgid "Retrieving transponders failed!"
++msgstr ""
++
++#: csmenu.c:364
++msgid "Please check satellites.conf."
++msgstr ""
++
++#: csmenu.c:367
++msgid "Tuner  preserved no lock!"
++msgstr ""
++
++#: csmenu.c:368
++msgid "Please check your comnections and satellites.conf."
++msgstr ""
++
++#: csmenu.c:371
++msgid "Unpredictable error occured!"
++msgstr ""
++
++#: csmenu.c:372
++msgid "Please try again later"
++msgstr ""
++
++#: csmenu.c:377
++msgid "channels in current list"
++msgstr "Kanalen in huidige lijst"
++
++#: csmenu.c:546
++msgid "TV CHANNELS                     RADIO"
++msgstr "TV KANALEN                      RADIO"
++
++#: csmenu.c:655
++#, c-format
++msgid "Retrieving transponder list from %s"
++msgstr ""
++
++#: csmenu.c:664
++#, c-format
++msgid "Scanning %s (%iMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:670
++#, c-format
++msgid "Scanning %s (%.3fMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:682
++msgid "No new channels found"
++msgstr "Geen nieuwe kanalen gevonden"
++
++#: csmenu.c:686
++msgid "Added new channels"
++msgstr "Nieuwe kanalen toegevoegd"
++
++#: csmenu.c:690
++msgid "Press OK to finish or Exit for new scan"
++msgstr ""
++
++#: csmenu.c:946
++msgid "Scanning on transponder"
++msgstr "Scannen op transponder"
++
++#: csmenu.c:1037
++msgid "disabled"
++msgstr "uitgeschakeld"
++
++#: csmenu.c:1037
++msgid "enabled"
++msgstr "ingeschakeld"
++
++#: csmenu.c:1075
++msgid "Channel lists"
++msgstr ""
++
++#: csmenu.c:1165
++msgid "Changes Done"
++msgstr ""
++
++#: csmenu.c:1167
++msgid "Please check your Timers!"
++msgstr ""
++
++#: csmenu.c:1172
++msgid "Changes failed"
++msgstr ""
++
++#: csmenu.c:1241
++msgid "Delete channel list?"
++msgstr ""
++
++#: transponders.c:295 transponders.c:507
++msgid "Terrestrial"
++msgstr ""
++
++#: transponders.c:307
++msgid "Cable"
++msgstr ""
+Index: reelchannelscan-0.4.3/po/ru_RU.po
+===================================================================
+--- reelchannelscan-0.4.3/po/ru_RU.po
++++ reelchannelscan-0.4.3/po/ru_RU.po	2008-04-24 23:20:57.000000000 +0300
+@@ -0,0 +1,263 @@
++# VDR channelscan plugin language source file.
++# Copyright (C) YEAR THE VDR-channelscan'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the VDR-channelscan package.
++# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: VDR-channelscan\n"
++"Report-Msgid-Bugs-To: http://qa.mandriva.com/\n"
++"POT-Creation-Date: 2008-04-24 23:20+0300\n"
++"PO-Revision-Date: 2008-04-24 23:20+0300\n"
++"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
++"Language-Team: <vdr@linuxtv.org>\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=ISO-8859-5\n"
++"Content-Transfer-Encoding: 8bit\n"
++
++#: channelscan.c:43
++msgid "TV only"
++msgstr ""
++
++#: channelscan.c:44
++msgid "Radio only"
++msgstr ""
++
++#: channelscan.c:45
++msgid "Radio + TV"
++msgstr ""
++
++#: channelscan.c:54
++msgid "Service Type"
++msgstr ""
++
++#: channelscan.h:32
++msgid "Search Transponders for DVB Channels"
++msgstr ""
++
++#: csmenu.c:70
++msgid "Channelscan"
++msgstr "¿ÞØáÚ ÚÐÝÐÛÞÒ"
++
++#: csmenu.c:92
++msgid "None"
++msgstr ""
++
++#: csmenu.c:101 csmenu.c:962 csmenu.c:964
++msgid "Auto"
++msgstr ""
++
++#: csmenu.c:116 csmenu.c:133 csmenu.c:277 csmenu.c:280
++msgid "Manual"
++msgstr ""
++
++#: csmenu.c:117 csmenu.c:277 csmenu.c:280
++msgid "SearchMode$Auto"
++msgstr ""
++
++#: csmenu.c:118
++msgid "SearchMode$Auto NIT"
++msgstr ""
++
++#: csmenu.c:131
++msgid "Intelligent 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:132
++msgid "Try all 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:200
++msgid "DVB-T - Terrestrial"
++msgstr ""
++
++#: csmenu.c:200 csmenu.c:204 csmenu.c:208
++msgid "Tuner"
++msgstr ""
++
++#: csmenu.c:204
++msgid "DVB-C - Cable"
++msgstr ""
++
++#: csmenu.c:208
++msgid "DVB-S - Satellite"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:265
++msgid "Setup.DVB$Update channels"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "no"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "yes"
++msgstr ""
++
++#: csmenu.c:263
++msgid "Select channel list"
++msgstr ""
++
++#: csmenu.c:268
++msgid "Source"
++msgstr ""
++
++#: csmenu.c:272 csmenu.c:277 csmenu.c:280
++msgid "Search Mode"
++msgstr ""
++
++#: csmenu.c:273
++msgid "Position"
++msgstr ""
++
++#: csmenu.c:276
++msgid "Detailed search"
++msgstr ""
++
++#: csmenu.c:293
++msgid "Frequency (MHz)"
++msgstr ""
++
++#: csmenu.c:294
++msgid "Polarization"
++msgstr ""
++
++#: csmenu.c:295 csmenu.c:310
++msgid "Symbolrate"
++msgstr "ÁØÜÒ.áÚÞàÞáâì"
++
++#: csmenu.c:296
++msgid "FEC"
++msgstr ""
++
++#: csmenu.c:301 csmenu.c:308
++msgid "Frequency (kHz)"
++msgstr ""
++
++#: csmenu.c:302 csmenu.c:309
++msgid "Bandwidth"
++msgstr ""
++
++#: csmenu.c:311
++msgid "Modulation"
++msgstr ""
++
++#: csmenu.c:333 csmenu.c:335
++msgid "Button$Start"
++msgstr ""
++
++#: csmenu.c:333
++msgid "Channel sel."
++msgstr ""
++
++#: csmenu.c:352
++msgid "DiSEqC"
++msgstr ""
++
++#: csmenu.c:357 csmenu.c:711
++msgid "Scanning aborted"
++msgstr ""
++
++#: csmenu.c:360
++msgid "Scanning succed"
++msgstr ""
++
++#: csmenu.c:363
++msgid "Retrieving transponders failed!"
++msgstr ""
++
++#: csmenu.c:364
++msgid "Please check satellites.conf."
++msgstr ""
++
++#: csmenu.c:367
++msgid "Tuner  preserved no lock!"
++msgstr ""
++
++#: csmenu.c:368
++msgid "Please check your comnections and satellites.conf."
++msgstr ""
++
++#: csmenu.c:371
++msgid "Unpredictable error occured!"
++msgstr ""
++
++#: csmenu.c:372
++msgid "Please try again later"
++msgstr ""
++
++#: csmenu.c:377
++msgid "channels in current list"
++msgstr ""
++
++#: csmenu.c:546
++msgid "TV CHANNELS                     RADIO"
++msgstr ""
++
++#: csmenu.c:655
++#, c-format
++msgid "Retrieving transponder list from %s"
++msgstr ""
++
++#: csmenu.c:664
++#, c-format
++msgid "Scanning %s (%iMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:670
++#, c-format
++msgid "Scanning %s (%.3fMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:682
++msgid "No new channels found"
++msgstr ""
++
++#: csmenu.c:686
++msgid "Added new channels"
++msgstr ""
++
++#: csmenu.c:690
++msgid "Press OK to finish or Exit for new scan"
++msgstr ""
++
++#: csmenu.c:946
++msgid "Scanning on transponder"
++msgstr ""
++
++#: csmenu.c:1037
++msgid "disabled"
++msgstr ""
++
++#: csmenu.c:1037
++msgid "enabled"
++msgstr ""
++
++#: csmenu.c:1075
++msgid "Channel lists"
++msgstr ""
++
++#: csmenu.c:1165
++msgid "Changes Done"
++msgstr ""
++
++#: csmenu.c:1167
++msgid "Please check your Timers!"
++msgstr ""
++
++#: csmenu.c:1172
++msgid "Changes failed"
++msgstr ""
++
++#: csmenu.c:1241
++msgid "Delete channel list?"
++msgstr ""
++
++#: transponders.c:295 transponders.c:507
++msgid "Terrestrial"
++msgstr ""
++
++#: transponders.c:307
++msgid "Cable"
++msgstr ""
+Index: reelchannelscan-0.4.3/po/sl_SI.po
+===================================================================
+--- reelchannelscan-0.4.3/po/sl_SI.po
++++ reelchannelscan-0.4.3/po/sl_SI.po	2008-04-24 23:20:57.000000000 +0300
+@@ -0,0 +1,263 @@
++# VDR channelscan plugin language source file.
++# Copyright (C) YEAR THE VDR-channelscan'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the VDR-channelscan package.
++# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: VDR-channelscan\n"
++"Report-Msgid-Bugs-To: http://qa.mandriva.com/\n"
++"POT-Creation-Date: 2008-04-24 23:20+0300\n"
++"PO-Revision-Date: 2008-04-24 23:20+0300\n"
++"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
++"Language-Team: <vdr@linuxtv.org>\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=ISO-8859-2\n"
++"Content-Transfer-Encoding: 8bit\n"
++
++#: channelscan.c:43
++msgid "TV only"
++msgstr ""
++
++#: channelscan.c:44
++msgid "Radio only"
++msgstr ""
++
++#: channelscan.c:45
++msgid "Radio + TV"
++msgstr ""
++
++#: channelscan.c:54
++msgid "Service Type"
++msgstr ""
++
++#: channelscan.h:32
++msgid "Search Transponders for DVB Channels"
++msgstr ""
++
++#: csmenu.c:70
++msgid "Channelscan"
++msgstr ""
++
++#: csmenu.c:92
++msgid "None"
++msgstr ""
++
++#: csmenu.c:101 csmenu.c:962 csmenu.c:964
++msgid "Auto"
++msgstr ""
++
++#: csmenu.c:116 csmenu.c:133 csmenu.c:277 csmenu.c:280
++msgid "Manual"
++msgstr ""
++
++#: csmenu.c:117 csmenu.c:277 csmenu.c:280
++msgid "SearchMode$Auto"
++msgstr ""
++
++#: csmenu.c:118
++msgid "SearchMode$Auto NIT"
++msgstr ""
++
++#: csmenu.c:131
++msgid "Intelligent 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:132
++msgid "Try all 6900/6875/6111"
++msgstr ""
++
++#: csmenu.c:200
++msgid "DVB-T - Terrestrial"
++msgstr ""
++
++#: csmenu.c:200 csmenu.c:204 csmenu.c:208
++msgid "Tuner"
++msgstr ""
++
++#: csmenu.c:204
++msgid "DVB-C - Cable"
++msgstr ""
++
++#: csmenu.c:208
++msgid "DVB-S - Satellite"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:265
++msgid "Setup.DVB$Update channels"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "no"
++msgstr ""
++
++#: csmenu.c:260 csmenu.c:276
++msgid "yes"
++msgstr ""
++
++#: csmenu.c:263
++msgid "Select channel list"
++msgstr ""
++
++#: csmenu.c:268
++msgid "Source"
++msgstr ""
++
++#: csmenu.c:272 csmenu.c:277 csmenu.c:280
++msgid "Search Mode"
++msgstr ""
++
++#: csmenu.c:273
++msgid "Position"
++msgstr ""
++
++#: csmenu.c:276
++msgid "Detailed search"
++msgstr ""
++
++#: csmenu.c:293
++msgid "Frequency (MHz)"
++msgstr ""
++
++#: csmenu.c:294
++msgid "Polarization"
++msgstr ""
++
++#: csmenu.c:295 csmenu.c:310
++msgid "Symbolrate"
++msgstr ""
++
++#: csmenu.c:296
++msgid "FEC"
++msgstr ""
++
++#: csmenu.c:301 csmenu.c:308
++msgid "Frequency (kHz)"
++msgstr ""
++
++#: csmenu.c:302 csmenu.c:309
++msgid "Bandwidth"
++msgstr ""
++
++#: csmenu.c:311
++msgid "Modulation"
++msgstr ""
++
++#: csmenu.c:333 csmenu.c:335
++msgid "Button$Start"
++msgstr ""
++
++#: csmenu.c:333
++msgid "Channel sel."
++msgstr ""
++
++#: csmenu.c:352
++msgid "DiSEqC"
++msgstr "DiSEqC"
++
++#: csmenu.c:357 csmenu.c:711
++msgid "Scanning aborted"
++msgstr ""
++
++#: csmenu.c:360
++msgid "Scanning succed"
++msgstr ""
++
++#: csmenu.c:363
++msgid "Retrieving transponders failed!"
++msgstr ""
++
++#: csmenu.c:364
++msgid "Please check satellites.conf."
++msgstr ""
++
++#: csmenu.c:367
++msgid "Tuner  preserved no lock!"
++msgstr ""
++
++#: csmenu.c:368
++msgid "Please check your comnections and satellites.conf."
++msgstr ""
++
++#: csmenu.c:371
++msgid "Unpredictable error occured!"
++msgstr ""
++
++#: csmenu.c:372
++msgid "Please try again later"
++msgstr ""
++
++#: csmenu.c:377
++msgid "channels in current list"
++msgstr ""
++
++#: csmenu.c:546
++msgid "TV CHANNELS                     RADIO"
++msgstr ""
++
++#: csmenu.c:655
++#, c-format
++msgid "Retrieving transponder list from %s"
++msgstr ""
++
++#: csmenu.c:664
++#, c-format
++msgid "Scanning %s (%iMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:670
++#, c-format
++msgid "Scanning %s (%.3fMHz)\t%s"
++msgstr ""
++
++#: csmenu.c:682
++msgid "No new channels found"
++msgstr ""
++
++#: csmenu.c:686
++msgid "Added new channels"
++msgstr ""
++
++#: csmenu.c:690
++msgid "Press OK to finish or Exit for new scan"
++msgstr ""
++
++#: csmenu.c:946
++msgid "Scanning on transponder"
++msgstr ""
++
++#: csmenu.c:1037
++msgid "disabled"
++msgstr ""
++
++#: csmenu.c:1037
++msgid "enabled"
++msgstr ""
++
++#: csmenu.c:1075
++msgid "Channel lists"
++msgstr ""
++
++#: csmenu.c:1165
++msgid "Changes Done"
++msgstr ""
++
++#: csmenu.c:1167
++msgid "Please check your Timers!"
++msgstr ""
++
++#: csmenu.c:1172
++msgid "Changes failed"
++msgstr ""
++
++#: csmenu.c:1241
++msgid "Delete channel list?"
++msgstr ""
++
++#: transponders.c:295 transponders.c:507
++msgid "Terrestrial"
++msgstr ""
++
++#: transponders.c:307
++msgid "Cable"
++msgstr ""

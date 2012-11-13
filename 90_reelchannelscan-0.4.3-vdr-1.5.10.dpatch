@@ -1,0 +1,37 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 90_reelchannelscan-0.4.3-vdr-1.5.10.dpatch by alien2924 at vdrportal.de
+## http://vdrportal.de/board/thread.php?postid=660710#post660710
+##
+## Thomas Günther <tom@toms-cafe.de>:
+##   - Added compatibility to VDR < 1.5.10
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Changes for VDR >= 1.5.10.
+
+@DPATCH@
+diff -Naur reelchannelscan-0.4.3-orig/filter.c reelchannelscan-0.4.3/filter.c
+--- reelchannelscan-0.4.3-orig/filter.c	2007-05-19 15:50:09.000000000 +0200
++++ reelchannelscan-0.4.3/filter.c	2007-10-20 13:33:05.000000000 +0200
+@@ -407,6 +407,10 @@
+         char ALangs[MAXAPIDS + 1][4] = { "" };
+         char DLangs[MAXDPIDS + 1][4] = { "" };
+ #endif
++#if VDRVERSNUM >= 10510
++        int Spids[MAXDPIDS + 1] = { 0 };
++        char SLangs[MAXDPIDS + 1][MAXLANGCODE2] = { "" };
++#endif
+         int Tpid = 0;
+         int NumApids = 0;
+         int NumDpids = 0;
+@@ -481,7 +485,11 @@
+                 delete d;
+                 }
+             }
++#if VDRVERSNUM >= 10510
++        Channel->SetPids(Vpid, Vpid ? Ppid : 0, Apids, ALangs, Dpids, DLangs, Spids, SLangs, Tpid);
++#else
+         Channel->SetPids(Vpid, Vpid ? Ppid : 0, Apids, ALangs, Dpids, DLangs, Tpid);
++#endif
+         //printf("#### %i %s %i %i SID  %i\n",num,Channel->Name(),Vpid, Apids[0], Channel->Sid());
+         Channel->SetCaIds(CaDescriptors->CaIds());
+         Channel->SetCaDescriptors(CaDescriptorHandler.AddCaDescriptors(CaDescriptors));

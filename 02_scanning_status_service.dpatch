@@ -1,0 +1,72 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 02_scanning_status_service.dpatch by Tobias Grimm <tg@e-tobi.net>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: This patch adds the service ReelChannelscan::IsScanningOnReceivingDevice
+## DP: that is used by a VDR patch instead of exposiing a global variable in
+## DP: VDR.
+
+@DPATCH@
+diff -urNad vdr-plugin-reelchannelscan-0.4.3~r2~/channelscan.c vdr-plugin-reelchannelscan-0.4.3~r2/channelscan.c
+--- vdr-plugin-reelchannelscan-0.4.3~r2~/channelscan.c	2007-05-04 19:19:45.000000000 +0200
++++ vdr-plugin-reelchannelscan-0.4.3~r2/channelscan.c	2007-05-04 21:36:53.000000000 +0200
+@@ -28,6 +28,7 @@
+ #include "service.h"
+ #include "csmenu.h"
+ #include "channelscan.h"
++#include "evil_globals.h"
+ 
+ int oldChannelNumbers = 0; //XXX
+ 
+@@ -146,6 +147,13 @@
+      }
+      return true;
+   }
++
++  if (Id && strcmp(Id,"ReelChannelscan::IsScanningOnReceivingDevice")==0)
++  {
++     *(bool*)Data = scanning_on_receiving_device;
++     return true;
++  }
++
+   return false;
+ }
+ 
+diff -urNad vdr-plugin-reelchannelscan-0.4.3~r2~/csmenu.c vdr-plugin-reelchannelscan-0.4.3~r2/csmenu.c
+--- vdr-plugin-reelchannelscan-0.4.3~r2~/csmenu.c	2007-05-04 19:19:45.000000000 +0200
++++ vdr-plugin-reelchannelscan-0.4.3~r2/csmenu.c	2007-05-04 21:36:53.000000000 +0200
+@@ -23,6 +23,7 @@
+ 
+ #include "csmenu.h"
+ #include "filter.h"
++#include "evil_globals.h"
+ 
+ 
+ #define CHNUMWIDTH 16
+diff -urNad vdr-plugin-reelchannelscan-0.4.3~r2~/evil_globals.h vdr-plugin-reelchannelscan-0.4.3~r2/evil_globals.h
+--- vdr-plugin-reelchannelscan-0.4.3~r2~/evil_globals.h	1970-01-01 01:00:00.000000000 +0100
++++ vdr-plugin-reelchannelscan-0.4.3~r2/evil_globals.h	2007-05-04 21:36:53.000000000 +0200
+@@ -0,0 +1,6 @@
++#ifndef __EVIL_GLOBALS_H
++#define __EVIL_GLOBALS_H
++
++extern bool scanning_on_receiving_device;
++
++#endif
+diff -urNad vdr-plugin-reelchannelscan-0.4.3~r2~/scan.c vdr-plugin-reelchannelscan-0.4.3~r2/scan.c
+--- vdr-plugin-reelchannelscan-0.4.3~r2~/scan.c	2007-05-04 19:19:45.000000000 +0200
++++ vdr-plugin-reelchannelscan-0.4.3~r2/scan.c	2007-05-04 21:38:55.000000000 +0200
+@@ -17,11 +17,12 @@
+ #include "scan.h"
+ #include <stdio.h>
+ #include "debug.h"
++#include "evil_globals.h"
+ 
+ #define SCAN_DELAY 20
+ #define DVBS_LOCK_TIMEOUT 4000
+ 
+-//bool scanning_on_receiving_device = false;
++bool scanning_on_receiving_device = false;
+ 
+ using std::cout;
+ 

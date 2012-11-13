@@ -1,0 +1,12 @@
+Index: reelchannelscan-0.4.3/transponders.h
+===================================================================
+--- reelchannelscan-0.4.3/transponders.h
++++ reelchannelscan-0.4.3/transponders.h	2009-03-21 12:11:25.000000000 +0200
+@@ -19,6 +19,7 @@
+ #include <sstream> 
+ #include <string>
+ #include <vector>
++#include <memory>
+ 
+ #include <assert.h>
+ #include <dirent.h>
