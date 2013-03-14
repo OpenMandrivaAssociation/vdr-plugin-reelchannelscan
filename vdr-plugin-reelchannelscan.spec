@@ -2,7 +2,7 @@
 %define plugin	reelchannelscan
 %define name	vdr-plugin-%plugin
 %define version	0.4.3
-%define rel	9
+%define rel	10
 
 Summary:	VDR plugin: Search Transponders for DVB Channels
 Name:		%name
@@ -42,16 +42,9 @@ dos2unix transponders/sources.conf
 %vdr_plugin_build
 
 %install
-rm -rf %{buildroot}
 %vdr_plugin_install
 install -d -m755 %{buildroot}%{vdr_plugin_cfgdir}/%plugin/transponders
 install -m644 transponders/*.tpl %{buildroot}%{vdr_plugin_cfgdir}/%plugin/transponders
-
-%post
-%vdr_plugin_post %plugin
-
-%postun
-%vdr_plugin_postun %plugin
 
 %files -f %plugin.vdr
 %defattr(-,root,root)
