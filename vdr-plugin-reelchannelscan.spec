@@ -10,7 +10,7 @@ Version:	%version
 Release:	%mkrel %rel
 Group:		Video
 License:	GPL
-URL:		http://www.vdr-wiki.de/wiki/index.php/Reelchannelscan-plugin
+URL:		https://www.vdr-wiki.de/wiki/index.php/Reelchannelscan-plugin
 # Not upstream URL:
 Source:		http://deela.cc.fh-lippe.de/files/vdr-reelchannelscan/vdr-%plugin-%version.tar.bz2
 # dpatches are from e-tobi repo
