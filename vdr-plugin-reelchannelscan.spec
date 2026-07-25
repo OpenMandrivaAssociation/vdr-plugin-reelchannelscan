@@ -7,7 +7,7 @@
 Summary:	VDR plugin: Search Transponders for DVB Channels
 Name:		%name
 Version:	%version
-Release:	%mkrel %rel
+Release:	%rel.1
 Group:		Video
 License:	GPL
 URL:		https://www.vdr-wiki.de/wiki/index.php/Reelchannelscan-plugin
